@@ -1,0 +1,234 @@
+import React, { useEffect, useRef, useState } from "react";
+import * as faceapi from "face-api.js";
+import { loadModels } from "../utils/faceApi";
+
+const Recognize = () => {
+  const videoRef = useRef(null);
+  const [ready, setReady] = useState(false);
+  const [result, setResult] = useState("");
+  const [livePreview, setLivePreview] = useState(null);
+
+  useEffect(() => {
+    const init = async () => {
+      await loadModels();
+      await startVideo();
+    };
+    init();
+
+    return () => stopCamera();
+  }, []);
+
+  const startVideo = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play();
+          setReady(true);
+        };
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Camera error");
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current?.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
+    }
+  };
+
+  const recognizeFace = async () => {
+    if (!ready) {
+      setResult("Camera not ready ❌");
+      return;
+    }
+
+    const detection = await faceapi
+      .detectSingleFace(videoRef.current)
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    if (!detection) {
+      setResult("No face detected ❌");
+      return;
+    }
+
+    const faces = await faceapi.extractFaces(videoRef.current, [
+      detection.detection,
+    ]);
+
+    if (faces.length > 0) {
+      const img = faces[0].toDataURL("image/jpeg");
+      setLivePreview(img);
+    }
+
+    const stored = JSON.parse(localStorage.getItem("user_face"));
+
+    if (!stored) {
+      setResult("No registered face");
+      return;
+    }
+
+    const distance = faceapi.euclideanDistance(
+      new Float32Array(stored.descriptor),
+      detection.descriptor
+    );
+
+    setResult(
+      distance < 0.45
+        ? `Match ✅ (${distance.toFixed(2)})`
+        : `No Match ❌ (${distance.toFixed(2)})`
+    );
+  };
+
+  return (
+    <div style={styles.page}>
+      <h2 style={styles.title}>Face Recognition</h2>
+
+      <div style={styles.container}>
+        
+        {/* Live Preview */}
+        {livePreview && (
+          <div style={styles.previewBox}>
+            <img src={livePreview} alt="Live Face" style={styles.previewImg} />
+            <p style={styles.previewText}>Live Capture</p>
+          </div>
+        )}
+
+        {/* Camera */}
+        <div style={styles.videoWrapper}>
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            width="400"
+            height="300"
+            style={styles.video}
+          />
+
+          <div style={styles.circleOverlay} />
+        </div>
+
+        {/* Button */}
+        <button onClick={recognizeFace} style={styles.button}>
+          Recognize Face
+        </button>
+
+        {/* Result */}
+        <div style={styles.resultBox}>
+          <h3 style={styles.resultText}>{result}</h3>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Recognize;
+
+/* ---------------- STYLES ---------------- */
+
+const styles = {
+  page: {
+    minHeight: "100vh",
+    background: "linear-gradient(135deg, #0f172a, #1e293b)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    color: "#fff",
+    fontFamily: "Arial",
+    padding: "20px",
+  },
+
+  title: {
+    fontSize: "24px",
+    marginBottom: "20px",
+    fontWeight: "600",
+  },
+
+  container: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "20px",
+  },
+
+  videoWrapper: {
+    position: "relative",
+    width: "400px",
+    height: "300px",
+    borderRadius: "12px",
+    overflow: "hidden",
+    boxShadow: "0 10px 25px rgba(0,0,0,0.4)",
+  },
+
+  video: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    background: "#000",
+  },
+
+  circleOverlay: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    width: "180px",
+    height: "180px",
+    border: "3px solid #22c55e",
+    borderRadius: "50%",
+    transform: "translate(-50%, -50%)",
+    boxShadow: "0 0 20px rgba(34,197,94,0.4)",
+    pointerEvents: "none",
+  },
+
+  button: {
+    padding: "12px 24px",
+    fontSize: "16px",
+    backgroundColor: "#3b82f6",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: "bold",
+    boxShadow: "0 6px 15px rgba(59,130,246,0.3)",
+  },
+
+  resultBox: {
+    marginTop: "10px",
+    padding: "10px 20px",
+    background: "rgba(255,255,255,0.1)",
+    borderRadius: "8px",
+    backdropFilter: "blur(10px)",
+  },
+
+  resultText: {
+    margin: 0,
+  },
+
+  previewBox: {
+    position: "absolute",
+    top: "20px",
+    right: "20px",
+    textAlign: "center",
+  },
+
+  previewImg: {
+    width: "80px",
+    height: "80px",
+    borderRadius: "50%",
+    border: "2px solid #3b82f6",
+    objectFit: "cover",
+  },
+
+  previewText: {
+    fontSize: "12px",
+    marginTop: "5px",
+    color: "#cbd5e1",
+  },
+};
