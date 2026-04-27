@@ -8,7 +8,7 @@ const Register = () => {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    startVideo();
+    // startVideo();
     loadModels().then(() => setLoaded(true));
 
     const data = JSON.parse(localStorage.getItem("user_face"));
@@ -65,11 +65,11 @@ const Register = () => {
 
   return (
     <div style={styles.page}>
-      
+
       <h2 style={styles.title}>Register Your Face</h2>
 
       <div style={styles.container}>
-        
+
         {/* Preview Card */}
         {preview && (
           <div style={styles.previewBox}>
@@ -94,6 +94,11 @@ const Register = () => {
         </div>
 
         {/* Button */}
+
+        <button onClick={startVideo} style={styles.button}>
+          Start Camera
+        </button>
+
         <button onClick={registerFace} style={styles.button}>
           Register Face
         </button>
