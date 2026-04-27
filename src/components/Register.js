@@ -17,17 +17,37 @@ const Register = () => {
     return () => stopCamera();
   }, []);
 
-  const startVideo = async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
-      videoRef.current.onloadedmetadata = () => videoRef.current.play();
+  // const startVideo = async () => {
+  //   const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+  //   if (videoRef.current) {
+  //     videoRef.current.srcObject = stream;
+  //     videoRef.current.onloadedmetadata = () => videoRef.current.play();
+  //   }
+  // };
+
+  // For Back Camera
+  const [facingMode, setFacingMode] = useState("user");
+  const startVideo = async (mode = facingMode) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: mode }
+        }
+      });
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => videoRef.current.play();
+      }
+    } catch (err) {
+      console.error("Camera error:", err);
+      alert("Camera not supported or permission denied");
     }
   };
 
   const stopCamera = () => {
     if (videoRef.current?.srcObject) {
-      videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
+      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
     }
   };
 
@@ -69,7 +89,18 @@ const Register = () => {
       <h2 style={styles.title}>Register Your Face</h2>
 
       <div style={styles.container}>
-
+        {/* Switch Camera */}
+        <button
+          onClick={() => {
+            stopCamera();
+            const newMode = facingMode === "user" ? "environment" : "user";
+            setFacingMode(newMode);
+            startVideo(newMode);
+          }}
+          style={styles.button}
+        >
+          Switch Camera
+        </button>
         {/* Preview Card */}
         {preview && (
           <div style={styles.previewBox}>

@@ -7,20 +7,51 @@ const Recognize = () => {
   const [ready, setReady] = useState(false);
   const [result, setResult] = useState("");
   const [livePreview, setLivePreview] = useState(null);
+  const [facingMode, setFacingMode] = useState("environment"); // back camera default
 
+  const toggleCamera = () => {
+    const newMode = facingMode === "user" ? "environment" : "user";
+    setFacingMode(newMode);
+    startVideo(newMode);
+  };
   useEffect(() => {
     const init = async () => {
       await loadModels();
-      await startVideo();
+      await startVideo("environment");
     };
     init();
 
     return () => stopCamera();
   }, []);
 
-  const startVideo = async () => {
+  // const startVideo = async () => {
+  //   try {
+  //     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+
+  //     if (videoRef.current) {
+  //       videoRef.current.srcObject = stream;
+
+  //       videoRef.current.onloadedmetadata = () => {
+  //         videoRef.current.play();
+  //         setReady(true);
+  //       };
+  //     }
+  //   } catch (err) {
+  //     console.error(err);
+  //     alert("Camera error");
+  //   }
+  // };
+
+  //Forced Back Camera
+  const startVideo = async (mode = facingMode) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stopCamera(); // ⚠️ important
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: mode }
+        }
+      });
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -31,8 +62,8 @@ const Recognize = () => {
         };
       }
     } catch (err) {
-      console.error(err);
-      alert("Camera error");
+      console.error("Camera error:", err);
+      alert("Camera error or permission denied");
     }
   };
 
@@ -91,7 +122,7 @@ const Recognize = () => {
       <h2 style={styles.title}>Face Recognition</h2>
 
       <div style={styles.container}>
-        
+
         {/* Live Preview */}
         {livePreview && (
           <div style={styles.previewBox}>
@@ -99,6 +130,10 @@ const Recognize = () => {
             <p style={styles.previewText}>Live Capture</p>
           </div>
         )}
+        {/* Switch camera */}
+        <button onClick={toggleCamera} style={styles.button}>
+          Switch Camera
+        </button>
 
         {/* Camera */}
         <div style={styles.videoWrapper}>
