@@ -11,6 +11,7 @@
     "axios": "^1.15.2",
     "face-api.js": "^0.22.2",
     "react": "^19.2.5",
+    "react-app-rewired": "^2.2.1",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2",
     "react-scripts": "5.0.1",
@@ -18,8 +19,8 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -41,5 +42,4 @@
       "last 1 safari version"
     ]
   }
-  
 }
