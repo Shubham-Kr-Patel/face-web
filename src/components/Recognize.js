@@ -5,11 +5,14 @@ import { loadModels } from "../utils/faceApi";
 const Recognize = () => {
   const videoRef = useRef(null);
   const isSendingRef = useRef(false);
-
   const [ready, setReady] = useState(false);
   const [result, setResult] = useState("");
   const [livePreview, setLivePreview] = useState(null);
   const [facingMode, setFacingMode] = useState("environment");
+
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [detecting, setDetecting] = useState(false);
+  const [rotation, setRotation] = useState(0);
 
   const toggleCamera = async () => {
     const newMode = facingMode === "user" ? "environment" : "user";
@@ -19,13 +22,28 @@ const Recognize = () => {
 
   useEffect(() => {
     const init = async () => {
+      setInitialLoading(true);
       await loadModels();
       await startVideo("environment");
+      setInitialLoading(false);
     };
     init();
 
     return () => stopCamera();
   }, []);
+  useEffect(() => {
+    let interval;
+
+    if (initialLoading || detecting) {
+      interval = setInterval(() => {
+        setRotation(prev => (prev + 30) % 360);
+      }, 50);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [initialLoading, detecting]);
 
   const startVideo = async (mode = facingMode) => {
     try {
@@ -58,7 +76,7 @@ const Recognize = () => {
   };
 
   const recognizeFace = async () => {
-    if (isSendingRef.current) return;
+    if (isSendingRef.current || detecting) return;
 
     if (!ready) {
       setResult("Camera not ready ❌");
@@ -66,6 +84,7 @@ const Recognize = () => {
     }
 
     isSendingRef.current = true;
+    setDetecting(true);
 
     try {
       const detection = await faceapi
@@ -109,7 +128,7 @@ const Recognize = () => {
       console.error("Recognition error:", err);
       setResult("Error detecting face ❌");
     }
-
+    setDetecting(false);
     // cooldown
     setTimeout(() => {
       isSendingRef.current = false;
@@ -118,6 +137,34 @@ const Recognize = () => {
 
   return (
     <div style={styles.page}>
+      {(initialLoading || detecting) && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          background: "rgba(0,0,0,0.7)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 9999,
+          flexDirection: "column"
+        }}>
+          <div style={{
+            width: "50px",
+            height: "50px",
+            border: "5px solid #fff",
+            borderTop: "5px solid transparent",
+            borderRadius: "50%",
+            transform: `rotate(${rotation}deg)`
+          }} />
+
+          <p style={{ color: "#fff", marginTop: "10px" }}>
+            {initialLoading ? "Starting Camera..." : "Detecting Face..."}
+          </p>
+        </div>
+      )}
       <div style={styles.container}>
 
         {livePreview && (
@@ -127,7 +174,8 @@ const Recognize = () => {
           </div>
         )}
 
-        <button onClick={toggleCamera} style={styles.button}>
+        <button onClick={toggleCamera} style={styles.button}
+          disabled={initialLoading || detecting}>
           Switch Camera
         </button>
 
@@ -144,7 +192,8 @@ const Recognize = () => {
           <div style={styles.circleOverlay} />
         </div>
 
-        <button onClick={recognizeFace} style={styles.button}>
+        <button onClick={recognizeFace} disabled={initialLoading || detecting}
+          style={styles.button}>
           Recognize Face
         </button>
 
