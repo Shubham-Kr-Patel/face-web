@@ -8,7 +8,6 @@ const Register = () => {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    // startVideo();
     loadModels().then(() => setLoaded(true));
 
     const data = JSON.parse(localStorage.getItem("user_face"));
@@ -16,14 +15,6 @@ const Register = () => {
 
     return () => stopCamera();
   }, []);
-
-  // const startVideo = async () => {
-  //   const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-  //   if (videoRef.current) {
-  //     videoRef.current.srcObject = stream;
-  //     videoRef.current.onloadedmetadata = () => videoRef.current.play();
-  //   }
-  // };
 
   // For Back Camera
   const [facingMode, setFacingMode] = useState("user");

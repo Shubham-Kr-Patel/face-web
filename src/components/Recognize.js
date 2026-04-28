@@ -4,16 +4,19 @@ import { loadModels } from "../utils/faceApi";
 
 const Recognize = () => {
   const videoRef = useRef(null);
+  const isSendingRef = useRef(false);
+
   const [ready, setReady] = useState(false);
   const [result, setResult] = useState("");
   const [livePreview, setLivePreview] = useState(null);
-  const [facingMode, setFacingMode] = useState("environment"); // back camera default
+  const [facingMode, setFacingMode] = useState("environment");
 
-  const toggleCamera = () => {
+  const toggleCamera = async () => {
     const newMode = facingMode === "user" ? "environment" : "user";
     setFacingMode(newMode);
-    startVideo(newMode);
+    await startVideo(newMode);
   };
+
   useEffect(() => {
     const init = async () => {
       await loadModels();
@@ -24,28 +27,9 @@ const Recognize = () => {
     return () => stopCamera();
   }, []);
 
-  // const startVideo = async () => {
-  //   try {
-  //     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-
-  //     if (videoRef.current) {
-  //       videoRef.current.srcObject = stream;
-
-  //       videoRef.current.onloadedmetadata = () => {
-  //         videoRef.current.play();
-  //         setReady(true);
-  //       };
-  //     }
-  //   } catch (err) {
-  //     console.error(err);
-  //     alert("Camera error");
-  //   }
-  // };
-
-  //Forced Back Camera
   const startVideo = async (mode = facingMode) => {
     try {
-      stopCamera(); // ⚠️ important
+      stopCamera();
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -74,68 +58,79 @@ const Recognize = () => {
   };
 
   const recognizeFace = async () => {
+    if (isSendingRef.current) return;
+
     if (!ready) {
       setResult("Camera not ready ❌");
       return;
     }
 
-    const detection = await faceapi
-      .detectSingleFace(videoRef.current)
-      .withFaceLandmarks()
-      .withFaceDescriptor();
+    isSendingRef.current = true;
 
-    if (!detection) {
-      setResult("No face detected ❌");
-      return;
+    try {
+      const detection = await faceapi
+        .detectSingleFace(videoRef.current)
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+
+      if (!detection) {
+        setResult("No face detected ❌");
+        isSendingRef.current = false;
+        return;
+      }
+
+      const embedding = Array.from(detection.descriptor);
+
+      const faces = await faceapi.extractFaces(videoRef.current, [
+        detection.detection,
+      ]);
+
+      if (faces.length > 0) {
+        setLivePreview(faces[0].toDataURL("image/jpeg"));
+      }
+
+      // ✅ SAFE BRIDGE
+      if (window.ReactNativeWebView?.postMessage) {
+        window.ReactNativeWebView.postMessage(
+          JSON.stringify({
+            type: "FACE_EMBEDDING",
+            embedding,
+            timestamp: Date.now(),
+            source: "webview-faceapi"
+          })
+        );
+      } else {
+        console.log("Running in browser (no RN bridge)");
+      }
+
+      setResult("Face captured ✅");
+
+    } catch (err) {
+      console.error("Recognition error:", err);
+      setResult("Error detecting face ❌");
     }
 
-    const faces = await faceapi.extractFaces(videoRef.current, [
-      detection.detection,
-    ]);
-
-    if (faces.length > 0) {
-      const img = faces[0].toDataURL("image/jpeg");
-      setLivePreview(img);
-    }
-
-    const stored = JSON.parse(localStorage.getItem("user_face"));
-
-    if (!stored) {
-      setResult("No registered face");
-      return;
-    }
-
-    const distance = faceapi.euclideanDistance(
-      new Float32Array(stored.descriptor),
-      detection.descriptor
-    );
-
-    setResult(
-      distance < 0.45
-        ? `Match ✅ (${distance.toFixed(2)})`
-        : `No Match ❌ (${distance.toFixed(2)})`
-    );
+    // cooldown
+    setTimeout(() => {
+      isSendingRef.current = false;
+    }, 3000);
   };
 
   return (
     <div style={styles.page}>
-      <h2 style={styles.title}>Face Recognition</h2>
-
       <div style={styles.container}>
 
-        {/* Live Preview */}
         {livePreview && (
           <div style={styles.previewBox}>
             <img src={livePreview} alt="Live Face" style={styles.previewImg} />
             <p style={styles.previewText}>Live Capture</p>
           </div>
         )}
-        {/* Switch camera */}
+
         <button onClick={toggleCamera} style={styles.button}>
           Switch Camera
         </button>
 
-        {/* Camera */}
         <div style={styles.videoWrapper}>
           <video
             ref={videoRef}
@@ -146,16 +141,13 @@ const Recognize = () => {
             height="300"
             style={styles.video}
           />
-
           <div style={styles.circleOverlay} />
         </div>
 
-        {/* Button */}
         <button onClick={recognizeFace} style={styles.button}>
           Recognize Face
         </button>
 
-        {/* Result */}
         <div style={styles.resultBox}>
           <h3 style={styles.resultText}>{result}</h3>
         </div>
