@@ -9,7 +9,6 @@ const Recognize = () => {
   const [result, setResult] = useState("");
   const [livePreview, setLivePreview] = useState(null);
   const [facingMode, setFacingMode] = useState("environment");
-
   const [initialLoading, setInitialLoading] = useState(true);
   const [detecting, setDetecting] = useState(false);
   const [rotation, setRotation] = useState(0);
@@ -211,14 +210,22 @@ export default Recognize;
 
 const styles = {
   page: {
-    minHeight: "100vh",
+    minHeight: "85vh",
     background: "linear-gradient(135deg, #0f172a, #1e293b)",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     color: "#fff",
     fontFamily: "Arial",
-    padding: "20px",
+    padding: "5px",
+  },
+  videoWrapper: {
+    position: "relative",
+    width: "400px",
+    height: "500px",
+    borderRadius: "12px",
+    overflow: "hidden",
+    boxShadow: "0 10px 25px rgba(0,0,0,0.4)",
   },
 
   title: {
@@ -234,15 +241,6 @@ const styles = {
     gap: "20px",
   },
 
-  videoWrapper: {
-    position: "relative",
-    width: "400px",
-    height: "300px",
-    borderRadius: "12px",
-    overflow: "hidden",
-    boxShadow: "0 10px 25px rgba(0,0,0,0.4)",
-  },
-
   video: {
     width: "100%",
     height: "100%",
@@ -254,8 +252,8 @@ const styles = {
     position: "absolute",
     top: "50%",
     left: "50%",
-    width: "180px",
-    height: "180px",
+    width: "200px",
+    height: "200px",
     border: "3px solid #22c55e",
     borderRadius: "50%",
     transform: "translate(-50%, -50%)",

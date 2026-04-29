@@ -2,11 +2,11 @@ import React, { useRef } from "react";
 import Webcam from "react-webcam";
 const [modelsLoaded, setModelsLoaded] = useState(false);
 useEffect(() => {
-  const load = async () => {
-    await loadModels();
-    setModelsLoaded(true);
-  };
-  load();
+    const load = async () => {
+        await loadModels();
+        setModelsLoaded(true);
+    };
+    load();
 }, []);
 
 const videoConstraints = {
